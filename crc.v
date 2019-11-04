@@ -138,9 +138,9 @@ endmodule
 
 module udpip_tx(
 	input [7:0] from_udp,
-	input udp_rx_valid,
-	input udp_rx_first,
-	input udp_rx_last,
+	input udp_tx_valid,
+	input udp_tx_first,
+	input udp_tx_last,
 	input [31:0] calculated_crc,
 	output [175:0] crc_input,
 	output crc_start,
@@ -155,11 +155,11 @@ module udpip_tx(
 	reg [7:0] output_counter = 0;
 
 always @ (posedge clk) begin
-	if(state == 3'b0 && udp_rx_first) begin
+	if(state == 3'b0 && udp_tx_first) begin
 		state = 3'b1;
 		input_buffer = {input_buffer[167:0],from_udp};
 		index = index + 1;
-	end else if (state == 3'b1 && index<22 && udp_rx_valid) begin
+	end else if (state == 3'b1 && index<22 && udp_tx_valid) begin
 		input_buffer = {input_buffer[199:0],udp_rx};
 		index = index + 1;
 	end else if (state == 3'b1 && index == 22) begin
