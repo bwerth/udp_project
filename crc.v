@@ -1,13 +1,5 @@
 `timescale 1ns / 1ps
 
-	input [79:0] udp_rx,
-	input [175:0] ip_rx,
-	input udp_rx_is_valid,
-	input udp_rx_start,
-	input ip_rx_is_valid,
-	input ip_rx_start,
-	input clk
-
 module crc_validate(
 	input [175:0] udp_rx,
 	input [31:0] sending_crc,
@@ -186,5 +178,6 @@ always @ (posedge clk) begin
 	end
 end
 endmodule
+
 
 
