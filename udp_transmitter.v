@@ -29,6 +29,7 @@ reg [1:0] udp_state = 2'b0;
 reg [1:0] ip_state = 2'b0;
 reg [2:0] out_state = 2'b0;
 reg [7:0] input_buffer [255:0];
+//Packet ceiling indicates how large the processed packet is
 reg [15:0] packet_ceiling = 16'b0;
 reg [31:0] udp_checksum = 32'b0;
 reg [31:0] ip_checksum = 32'b0;
@@ -48,13 +49,16 @@ assign input_test = input_buffer[0];
 
 
 always @ (posedge clk) begin
+	//If the state machine is idle and there is inputted data, begin to receive
 	if (state == 3'b0 && tx_in_valid == 1'b1) begin
 		state = 3'b1;
 		input_buffer[0] = tx_in;
 		packet_ceiling = packet_ceiling + 1;
+	//Continue to receive the input packet if this is not the last byte
 	end else if (state == 3'b1 && tx_in_valid == 1'b1 && tx_in_last == 1'b0) begin
 		input_buffer[packet_ceiling] = tx_in;
 		packet_ceiling = packet_ceiling + 1;
+	//Store received information and start udp checksum calculation if this is the last byte
 	end else if (state == 3'b1 && tx_in_valid == 1'b1 && tx_in_last == 1'b1) begin
 		input_buffer[packet_ceiling] = tx_in;
 		state = 3'd2;
@@ -71,13 +75,16 @@ always @ (posedge clk) begin
 		udp_checksum = {24'b0,8'd17} + {16'b0,udp_length} + {16'b0,source_ip[31:16]} + {16'b0,source_ip[15:0]} + {16'b0,dest_ip[31:16]} + {16'b0,dest_ip[15:0]} + {16'b0,source_port} + {16'b0,dest_port} + {16'b0,udp_length};
 		$display("UDP CHECKSUM GENERATION: %b",udp_checksum);
 		udp_state = 2'b1;
+	//Calculate the checksum on the formed udp header and data
 	end else if (state == 3'd2 && udp_state == 2'd1 && udp_index < packet_ceiling-23) begin
 		udp_checksum = udp_checksum + {16'b0,input_buffer[23+udp_index],input_buffer[24+udp_index]};
 		udp_index = udp_index + 2;
+	//If overflow is larger than zero, add it back to the checksum
 	end else if (state == 3'd2 && udp_state == 2'b1 && udp_index >= packet_ceiling-23 && udp_checksum[31:16]>16'b0) begin
 		udp_checksum_carryover = {16'b0,udp_checksum[31:16]};
 		udp_checksum[31:16] = 16'b0;
 		udp_checksum = udp_checksum_carryover + udp_checksum;
+	//If overflow is zero, begin ipv4 checksum calculation
 	end else if (state == 3'd2 && udp_state == 2'b1 && udp_index >= packet_ceiling-23) begin
 		udp_header = {source_port,dest_port,udp_length,udp_checksum[15:0]};
 		udp_index = 16'b0;
@@ -94,6 +101,7 @@ always @ (posedge clk) begin
 		ip_header = {input_buffer[0],8'b0,total_length,ID,flafrag,input_buffer[7],input_buffer[8],ip_checksum[15:0],source_ip,dest_ip};
 		ip_state = 2'b0;
 		state = 3'd4;
+	//Begin transmission of packet to ring buffer
 	end else if (state == 3'd4 && out_state == 3'b0) begin
 		out_state = 3'b1;
 		wrdata = ip_header[159:152];

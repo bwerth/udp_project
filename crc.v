@@ -44,6 +44,7 @@ module crc_validate(
 	end
 endmodule
 
+//CRC Receives the entire received packet at once, instead of streaming. CRC_Ceiling indicates the size of the received packet for indexing the udp_tx input
 module crc_calculate(
 	input [479:0] udp_tx,
 	input [15:0] crc_ceiling,
@@ -141,40 +142,32 @@ always @ (posedge clk) begin
 		crc_in = input_buffer[511:32];
 		received_crc = input_buffer[31:0];
 		crc_ceiling = packet_ceiling;
-		$display("HIT_END");
 	end else if (state == 3'b1 && udp_rx_valid) begin
 		input_buffer = {input_buffer[503:0],udp_rx};
 		packet_ceiling = packet_ceiling + 8;
-		$display("HIT");
 	end else if (state == 3'd2 && wait_counter == 4) begin
 		wait_counter = wait_counter + 1;
 		crc_start = 1'b0;
-		$display("FINISHED WAITING");
 	end else if (state == 3'd2 && wait_counter<5) begin
 		wait_counter = wait_counter + 1;
-		$display("WAITING");
 	end else if (state == 3'd2 && wait_counter == 5 && crc_valid) begin
 		state = crc_check ? 3'd3 : 3'b0;
-		$display("PERFORMING CRC CHECK: %b",state);
 	end else if (state == 3'd3 && wait_counter == 5) begin
 		to_udp = input_buffer[packet_ceiling-:8];
 		wait_counter = 0;
 		to_udp_valid = 1'b1;
 		to_udp_first = 1'b1;
 		packet_ceiling = packet_ceiling-8;
-		//$display("PACKET SENT: %d %b %b %b %b",to_udp,to_udp_valid,to_udp_first,to_udp_last, clk);
 	end else if (state == 3'd3 && packet_ceiling>16'd39) begin
 		to_udp = input_buffer[packet_ceiling-:8];
 		packet_ceiling = packet_ceiling-8;
 		to_udp_valid = 1'b1;
 		to_udp_first = 1'b0;
-		//$display("PACKET SENT: %d %b %b %b %b",to_udp,to_udp_valid,to_udp_first,to_udp_last,clk);
 	end else if (state == 3'd3 && packet_ceiling==16'd39) begin
 		to_udp_last = 1'b1;
 		to_udp_valid = 1'b1;
 		to_udp = input_buffer[39:32];
 		packet_ceiling = 16'b0;
-		//$display("PACKET SENT: %d %b %b %b %b",to_udp,to_udp_valid,to_udp_first,to_udp_last,clk);
 	end else if (state == 3'd3 && packet_ceiling == 16'b0) begin
 		state = 3'b0;
 		to_udp_last = 1'b0;
@@ -268,6 +261,7 @@ always @ (negedge clk) begin
 end
 endmodule
 
+//Assemble the full CRC oriented transmitter
 module crc_tx(
 	input [7:0] from_udp,
 	input from_udp_valid,
@@ -302,6 +296,7 @@ module crc_tx(
 
 endmodule
 
+//Assemble the full CRC oriented receiver
 module crc_rx(
 	input [7:0] udp_rx,
 	input udp_rx_valid,
