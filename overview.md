@@ -33,7 +33,7 @@ few other additional fields. The receiving host appends its own IP address with 
 before checking to see if the checksum matches. If it does, the receiving application knows the message has reached 
 its destination.
 
-![UDP Packet Typee](udp.png)
+![UDP Packet Type](packet.jpg)
 
 Network communications projects can span all seven of the OSI layers, but Ethernet protocols are usually implemented 
 in transport, network, and data link layers. For the purposes of this project, we primarily care about implementing 
